@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-import pymysql  # <- usa pymysql en vez de mysql.connector
+import pymysql  
 
 st.title("Dashboard Dinámico y Balanced Scorecard")
 
