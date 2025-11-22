@@ -1,41 +1,39 @@
 import pandas as pd
 import streamlit as st
-import mysql.connector
+import pymysql  # <- usa pymysql en vez de mysql.connector
 
 st.title("Dashboard Dinámico y Balanced Scorecard")
 
+# --- Carga dinámica desde tu DW usando pymysql ---
 @st.cache_data(show_spinner=True)
 def cargar_datos():
     query = """
-   SELECT
-    p.nombre_proyecto AS Proyecto,
-    c.nombre AS Cliente,
-    c.industria AS Industria,
-    p.presupuesto AS Presupuesto,
-    p.costo_real AS Costo_real,
-    (p.presupuesto - p.costo_real) AS Desviacion,
-    IFNULL(p.metrica_final_roi,0) AS ROI,
-    p.fecha_fin_real AS Fecha_fin_real,
-    est.estado AS Estado,
-
-    COUNT(DISTINCT t.idTarea) AS Tareas_Total,
-    SUM(IFNULL(t.es_automatizacion,0)) AS Automatizacion, -- solo suma las automatizadas
-    COUNT(DISTINCT i.idIncidente) AS Defectos,
-    1 AS Seguridad, -- puedes cambiar por lógica real
-    1 AS Crecimiento,
-    'OKR demo' AS OKR
-
-FROM
-    dim_proyecto p
-    LEFT JOIN dim_cliente c ON p.idCliente = c.idCliente
-    LEFT JOIN dim_estado_proyecto est ON p.idEstado = est.idEstado
-    LEFT JOIN dim_tarea t ON t.idProyecto = p.idProyecto
-    LEFT JOIN hecho_incidente i ON i.idProyecto = p.idProyecto
-GROUP BY p.idProyecto
-ORDER BY p.nombre_proyecto
-
+    SELECT
+        p.nombre_proyecto AS Proyecto,
+        c.nombre AS Cliente,
+        c.industria AS Industria,
+        p.presupuesto AS Presupuesto,
+        p.costo_real AS Costo_real,
+        (p.presupuesto - p.costo_real) AS Desviacion,
+        IFNULL(p.metrica_final_roi,0) AS ROI,
+        p.fecha_fin_real AS Fecha_fin_real,
+        est.estado AS Estado,
+        COUNT(DISTINCT t.idTarea) AS Tareas_Total,
+        SUM(IFNULL(t.es_automatizacion,0)) AS Automatizacion,
+        COUNT(DISTINCT i.idIncidente) AS Defectos,
+        1 AS Seguridad,
+        1 AS Crecimiento,
+        'OKR demo' AS OKR
+    FROM
+        dim_proyecto p
+        LEFT JOIN dim_cliente c ON p.idCliente = c.idCliente
+        LEFT JOIN dim_estado_proyecto est ON p.idEstado = est.idEstado
+        LEFT JOIN dim_tarea t ON t.idProyecto = p.idProyecto
+        LEFT JOIN hecho_incidente i ON i.idProyecto = p.idProyecto
+    GROUP BY p.idProyecto
+    ORDER BY p.nombre_proyecto
     """
-    conn = mysql.connector.connect(
+    conn = pymysql.connect(
         host="192.168.0.104",
         port=3307,
         user="etl_user",
@@ -47,6 +45,7 @@ ORDER BY p.nombre_proyecto
     return df
 
 df = cargar_datos()
+
 
 # ----------- Sidebar: Filtros dinámicos ----------
 st.sidebar.header("Filtros avanzados")
