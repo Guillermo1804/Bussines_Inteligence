@@ -54,6 +54,7 @@ else:
     st.info("No hay proyectos para mostrar.")
 
 st.sidebar.info("""
-Desarrollado con Streamlit y vinculado a tu DW.  
-Actualiza tu DW y los indicadores cambian en tiempo real.
+Desarrollado con Streamlit y vinculado al DW.  
+Los indicadores cambian en tiempo real.
+Para actualizar la pagina, se tienen que subir los cambios a GitHub.
 """)
