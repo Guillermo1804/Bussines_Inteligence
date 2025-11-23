@@ -1,48 +1,10 @@
 import pandas as pd
-import pymysql
+import streamlit as st
 
-def cargar_datos_local():
-    query = """
-    SELECT
-        p.nombre_proyecto AS Proyecto,
-        c.nombre AS Cliente,
-        c.industria AS Industria,
-        p.presupuesto AS Presupuesto,
-        p.costo_real AS Costo_real,
-        (p.presupuesto - p.costo_real) AS Desviacion,
-        IFNULL(p.metrica_final_roi,0) AS ROI,
-        p.fecha_fin_real AS Fecha_fin_real,
-        est.estado AS Estado,
-        COUNT(DISTINCT t.idTarea) AS Tareas_Total,
-        SUM(IFNULL(t.es_automatizacion,0)) AS Automatizacion,
-        COUNT(DISTINCT i.idIncidente) AS Defectos,
-        1 AS Seguridad,
-        1 AS Crecimiento,
-        'OKR demo' AS OKR
-    FROM
-        dim_proyecto p
-        LEFT JOIN dim_cliente c ON p.idCliente = c.idCliente
-        LEFT JOIN dim_estado_proyecto est ON p.idEstado = est.idEstado
-        LEFT JOIN dim_tarea t ON t.idProyecto = p.idProyecto
-        LEFT JOIN hecho_incidente i ON i.idProyecto = p.idProyecto
-    GROUP BY p.idProyecto
-    ORDER BY p.nombre_proyecto
-    """
-    conn = pymysql.connect(
-        host="192.168.0.104",
-        port=3307,
-        user="etl_user",
-        password="TuPasswordFuerte",
-        database="db_soporte"
-    )
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df
+st.title("Dashboard Dinámico y Balanced Scorecard")
 
-df = cargar_datos_local()
-df.to_csv('data_dashboard.csv', index=False)   # ← Este archivo es el que subirás junto con tu Dash
-
-
+# Carga el DataFrame desde el CSV. NO intentes conectar a la BD en la nube.
+df = pd.read_csv('data_dashboard.csv')
 
 # ----------- Sidebar: Filtros dinámicos ----------
 st.sidebar.header("Filtros avanzados")
