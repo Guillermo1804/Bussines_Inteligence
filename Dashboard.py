@@ -1,12 +1,7 @@
 import pandas as pd
-import streamlit as st
-import pymysql  
+import pymysql
 
-st.title("Dashboard Dinámico y Balanced Scorecard")
-
-# --- Carga dinámica desde tu DW usando pymysql ---
-@st.cache_data(show_spinner=True)
-def cargar_datos():
+def cargar_datos_local():
     query = """
     SELECT
         p.nombre_proyecto AS Proyecto,
@@ -44,7 +39,9 @@ def cargar_datos():
     conn.close()
     return df
 
-df = cargar_datos()
+df = cargar_datos_local()
+df.to_csv('data_dashboard.csv', index=False)   # ← Este archivo es el que subirás junto con tu Dash
+
 
 
 # ----------- Sidebar: Filtros dinámicos ----------
