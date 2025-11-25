@@ -18,8 +18,6 @@ roles = {
     'viewer1': 'viewer'
 }
 
-hashed_pw = stauth.Hasher(passwords).generate()
-
 authenticator = stauth.Authenticate(
     names, usernames, hashed_pw,
     "dashboardBI", "abcdef", cookie_expiry_days=1
