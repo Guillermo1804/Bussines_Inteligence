@@ -1,7 +1,8 @@
+import pandas as pd
 import streamlit as st
 import streamlit_authenticator as stauth
-import pandas as pd
-# Configuración estilo dict/YAML para usuarios
+
+# —— Configuración dict/YAML para usuarios y cookies ——
 config = {
     'credentials': {
         'usernames': {
@@ -25,14 +26,22 @@ config = {
     'cookie': {
         'name': 'dashboardBI',
         'key': 'abcdef',
+        'expiry_days': 1
+    },
+    'preauthorized': {
+        'emails': []
     }
 }
 
 authenticator = stauth.Authenticate(
-    config['credentials'], config['cookie']['name'], config['cookie']['key'], cookie_expiry_days=1
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days'],
+    config['preauthorized']
 )
 
-name, authentication_status, username = authenticator.login()
+name, authentication_status, username = authenticator.login("Login", "main")
 
 if authentication_status:
     st.success(f"Bienvenido, {name} ({config['credentials']['usernames'][username]['role']})")
@@ -42,7 +51,6 @@ elif authentication_status is False:
 elif authentication_status is None:
     st.warning("Por favor, ingresa tus datos")
 
-    
     # =========== 2. Carga el DataFrame desde el CSV ===========
     df = pd.read_csv('data_dashboard.csv')
 
