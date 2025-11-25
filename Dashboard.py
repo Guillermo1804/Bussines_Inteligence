@@ -7,18 +7,15 @@ config = {
         'usernames': {
             'admin': {
                 'name': 'Administrador',
-                'password': 'admin123',
-                'role': 'admin'
+                'password': 'admin123'
             },
             'analista1': {
                 'name': 'Analista',
-                'password': 'analista123',
-                'role': 'analista'
+                'password': 'analista123'
             },
             'viewer1': {
                 'name': 'Visualizador',
-                'password': 'viewer123',
-                'role': 'viewer'
+                'password': 'viewer123'
             }
         }
     },
@@ -30,22 +27,19 @@ config = {
 }
 
 authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days']
+    config['credentials'], config['cookie']['name'], config['cookie']['key'], config['cookie']['expiry_days']
 )
 
-
-name, authentication_status, username = authenticator.login()
+name, authentication_status, username = authenticator.login('main')  # SOLO 'main', 'sidebar', o 'unrendered'
 
 if authentication_status:
-    st.success(f"Bienvenido, {name} ({config['credentials']['usernames'][username]['role']})")
+    st.success(f"Bienvenido, {name}")
     authenticator.logout('sidebar')
 elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
 elif authentication_status is None:
     st.warning("Por favor, ingresa tus datos")
+
 
     # =========== 2. Carga el DataFrame desde el CSV ===========
     df = pd.read_csv('data_dashboard.csv')
