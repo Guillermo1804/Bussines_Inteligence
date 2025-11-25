@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 import streamlit_authenticator as stauth
 
-# —— Configuración dict/YAML para usuarios y cookies ——
 config = {
     'credentials': {
         'usernames': {
@@ -27,9 +26,6 @@ config = {
         'name': 'dashboardBI',
         'key': 'abcdef',
         'expiry_days': 1
-    },
-    'preauthorized': {
-        'emails': []
     }
 }
 
@@ -37,8 +33,8 @@ authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config['preauthorized']
+    config['cookie']['expiry_days']
+    # NO PONGAS config['preauthorized']
 )
 
 name, authentication_status, username = authenticator.login("Login", "main")
