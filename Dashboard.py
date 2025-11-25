@@ -1,22 +1,44 @@
 import pandas as pd
 import streamlit as st
 
-usuarios = {"admin": "admin123", "analista1": "analista123", "viewer1": "viewer123"}
+# ---- Diccionario de usuarios, contraseñas y roles ----
+usuarios = {
+    "admin": "admin123",
+    "analista1": "analista123",
+    "viewer1": "viewer123"
+}
 
+roles = {
+    "admin": "admin",
+    "analista1": "analista",
+    "viewer1": "viewer"
+}
+
+# ---- Login ----
 usuario = st.text_input("Usuario")
 password = st.text_input("Contraseña", type="password")
+btn = st.button("Login")
 
-if st.button("Login"):
-    if usuario in usuarios and usuarios[usuario] == password:
-        st.success(f"Bienvenido, {usuario}")
-        # Aquí va tu dashboard normal
-    else:
-        st.error("Usuario o contraseña incorrectos")
+if "log_ok" not in st.session_state:
+    st.session_state["log_ok"] = False
+    st.session_state["usuario"] = ""
 
-    # =========== 2. Carga el DataFrame desde el CSV ===========
+# --- Muestra el dashboard SOLO si login es válido o sesión activa ---
+if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session_state["log_ok"]:
+    # Si login fue con botón, guarda en sesión
+    if usuario in usuarios and usuarios[usuario] == password and not st.session_state["log_ok"]:
+        st.session_state["log_ok"] = True
+        st.session_state["usuario"] = usuario
+
+    usuario_actual = st.session_state["usuario"] if st.session_state["usuario"] else usuario
+    st.success(f"Bienvenido, {usuario_actual} (rol: {roles[usuario_actual]})")
+    rol = roles[usuario_actual]
+
+    # ===== Dashboard: solo dentro del login =====
+    # --- Carga DataFrame ---
     df = pd.read_csv('data_dashboard.csv')
 
-    # =========== 3. Sidebar: Filtros dinámicos ===========
+    # --- Filtros dinámicos ---
     st.sidebar.header("Filtros avanzados")
     proyectos = df["Proyecto"].unique().tolist()
     clientes = df["Cliente"].unique().tolist()
@@ -31,9 +53,8 @@ if st.button("Login"):
     )
     df_f = df[filtro]
 
-    # =========== 4. Paneles de KPIs ===========
-    # ------- Solo admin y analista pueden ver todos los KPIs ------- 
-    if roles[username] in ['admin', 'analista']:
+    # --- Paneles de KPIs (solo admin/analista) ---
+    if rol in ['admin', 'analista']:
         st.header("KPI Financieros")
         col1, col2, col3 = st.columns(3)
         col1.metric("Presupuesto Total", f"${df_f['Presupuesto'].sum():,.2f}")
@@ -56,19 +77,17 @@ if st.button("Login"):
         col1.metric("Clientes Activos", df_f["Cliente"].nunique())
         col2.metric("Sectores Atendidos", df_f["Industria"].nunique())
 
-    # --- Los visualizadores solo pueden ver Scorecard y detalles ----
-    # =========== 5. Balanced Scorecard con colores/metas ===========
+    # --- Todos los roles ven el scorecard ---
     st.header("Balanced Scorecard y OKRs (con metas y semáforo)")
-
     def color_scorecard(val, meta, tipo='max'):
         try:
             x = float(val)
         except:
             return ''
         if tipo == 'max':
-            if x >= meta: return 'background-color: #B6FCD5'  # verde
-            elif x >= 0.7 * meta: return 'background-color: #FDFDB6'  # amarillo
-            else: return 'background-color: #FFB6B6'  # rojo
+            if x >= meta: return 'background-color: #B6FCD5'
+            elif x >= 0.7 * meta: return 'background-color: #FDFDB6'
+            else: return 'background-color: #FFB6B6'
         else:
             if x <= meta: return 'background-color: #B6FCD5'
             elif x <= meta*1.5: return 'background-color: #FDFDB6'
@@ -89,7 +108,7 @@ if st.button("Login"):
             "Defectos", "Meta Defectos", "Crecimiento", "OKR"]
     st.dataframe(style_scorecard(df_f[cols].head(20)), use_container_width=True)
 
-    # =========== 6. Interpretación y recomendaciones ===========
+    # --- Sugerencias automáticas ---
     mejorar = []
     if df_f['ROI'].mean() < 0.15:
         mejorar.append("El ROI promedio está debajo de la meta (15%).")
@@ -110,7 +129,7 @@ if st.button("Login"):
         "Recuerda ajustar las metas si cambian los objetivos de negocio."
     )
 
-    # =========== 7. Drill-down por Proyecto ===========
+    # ---- Drill-down por Proyecto ----
     st.header("Detalle por Proyecto")
     if len(proyectos) > 0:
         proyecto_drill = st.selectbox("Selecciona un proyecto:", proyectos)
@@ -123,9 +142,11 @@ if st.button("Login"):
     Los indicadores cambian en tiempo real (al actualizar el CSV).
     """)
 
-    authenticator.logout("Cerrar sesión", "sidebar")
+    # --- Botón Cerrar sesión ---
+    if st.sidebar.button("Cerrar sesión"):
+        st.session_state["log_ok"] = False
+        st.session_state["usuario"] = ""
+        st.experimental_rerun()
 
-elif authentication_status is False:
+elif btn:
     st.error("Usuario o contraseña incorrectos")
-elif authentication_status is None:
-    st.warning("Por favor, ingresa tus datos")
