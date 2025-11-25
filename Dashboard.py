@@ -25,7 +25,6 @@ if "log_ok" not in st.session_state:
 
 # --- Muestra el dashboard SOLO si login es válido o sesión activa ---
 if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session_state["log_ok"]:
-    # Si login fue con botón, guarda en sesión
     if usuario in usuarios and usuarios[usuario] == password and not st.session_state["log_ok"]:
         st.session_state["log_ok"] = True
         st.session_state["usuario"] = usuario
@@ -34,11 +33,8 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
     st.success(f"Bienvenido, {usuario_actual} (rol: {roles[usuario_actual]})")
     rol = roles[usuario_actual]
 
-    # ===== Dashboard: solo dentro del login =====
-    # --- Carga DataFrame ---
+    # ===== Carga DataFrame e implementa filtros (todos los roles pueden filtrar) =====
     df = pd.read_csv('data_dashboard.csv')
-
-    # --- Filtros dinámicos ---
     st.sidebar.header("Filtros avanzados")
     proyectos = df["Proyecto"].unique().tolist()
     clientes = df["Cliente"].unique().tolist()
@@ -53,8 +49,9 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
     )
     df_f = df[filtro]
 
-    # --- Paneles de KPIs (solo admin/analista) ---
+    # --------------- Vistas según rol -----------------
     if rol in ['admin', 'analista']:
+        # Paneles de KPIs (solo admin/analista)
         st.header("KPI Financieros")
         col1, col2, col3 = st.columns(3)
         col1.metric("Presupuesto Total", f"${df_f['Presupuesto'].sum():,.2f}")
@@ -77,8 +74,9 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
         col1.metric("Clientes Activos", df_f["Cliente"].nunique())
         col2.metric("Sectores Atendidos", df_f["Industria"].nunique())
 
-    # --- Todos los roles ven el scorecard ---
+    # TODOS los roles ven el scorecard, sugerencias y análisis rápido
     st.header("Balanced Scorecard y OKRs (con metas y semáforo)")
+
     def color_scorecard(val, meta, tipo='max'):
         try:
             x = float(val)
@@ -100,6 +98,7 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
         styled = styled.applymap(lambda x: color_scorecard(x, 2, 'min'), subset=['Defectos'])
         return styled
 
+    # Metas para scorecard
     df_f['Meta ROI'] = 0.15
     df_f['Meta Automatizacion'] = 5
     df_f['Meta Defectos'] = 2
@@ -108,7 +107,7 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
             "Defectos", "Meta Defectos", "Crecimiento", "OKR"]
     st.dataframe(style_scorecard(df_f[cols].head(20)), use_container_width=True)
 
-    # --- Sugerencias automáticas ---
+    # Sugerencias automáticas (todos los roles)
     mejorar = []
     if df_f['ROI'].mean() < 0.15:
         mejorar.append("El ROI promedio está debajo de la meta (15%).")
@@ -129,20 +128,21 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
         "Recuerda ajustar las metas si cambian los objetivos de negocio."
     )
 
-    # ---- Drill-down por Proyecto ----
-    st.header("Detalle por Proyecto")
-    if len(proyectos) > 0:
-        proyecto_drill = st.selectbox("Selecciona un proyecto:", proyectos)
-        st.dataframe(df[df["Proyecto"] == proyecto_drill])
-    else:
-        st.info("No hay proyectos para mostrar.")
+    # Drill-down solo para admin/analista
+    if rol in ['admin', 'analista']:
+        st.header("Detalle por Proyecto")
+        if len(proyectos) > 0:
+            proyecto_drill = st.selectbox("Selecciona un proyecto:", proyectos)
+            st.dataframe(df[df["Proyecto"] == proyecto_drill])
+        else:
+            st.info("No hay proyectos para mostrar.")
 
     st.sidebar.info("""
     Desarrollado con Streamlit y vinculado al DW.
     Los indicadores cambian en tiempo real (al actualizar el CSV).
     """)
 
-    # --- Botón Cerrar sesión ---
+    # Botón cerrar sesión
     if st.sidebar.button("Cerrar sesión"):
         st.session_state["log_ok"] = False
         st.session_state["usuario"] = ""
