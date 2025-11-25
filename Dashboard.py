@@ -2,15 +2,22 @@ import pandas as pd
 import streamlit as st
 import streamlit_authenticator as stauth
 
+import streamlit as st
+import streamlit_authenticator as stauth
+
 # ===== 1. Configura usuarios y roles =====
 usernames = ['admin', 'analista1', 'viewer1']
-names = ['Administrador', 'Analista', 'Solo Visualizador']
+names = ['Administrador', 'Analista', 'Visualizador']
+# Si alguna contraseña llega en None, la convertimos a string:
 passwords = ['admin123', 'analista123', 'viewer123']
+passwords = [str(pw) if pw else "" for pw in passwords]  # ← SEGURO contra None o vacío
+
 roles = {
     'admin': 'admin',
     'analista1': 'analista',
     'viewer1': 'viewer'
 }
+
 hashed_pw = stauth.Hasher(passwords).generate()
 
 authenticator = stauth.Authenticate(
@@ -22,6 +29,13 @@ name, authentication_status, username = authenticator.login("Login", "main")
 
 if authentication_status:
     st.success(f"Bienvenido, {name} ({roles[username]})")
+    # Aquí va tu dashboard, paneles, scorecard, etc...
+    authenticator.logout("Cerrar sesión", "sidebar")
+elif authentication_status is False:
+    st.error("Usuario o contraseña incorrectos")
+elif authentication_status is None:
+    st.warning("Por favor, ingresa tus datos")
+
     
     # =========== 2. Carga el DataFrame desde el CSV ===========
     df = pd.read_csv('data_dashboard.csv')
