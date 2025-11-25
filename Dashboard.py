@@ -32,7 +32,7 @@ authenticator = stauth.Authenticate(
     config['credentials'], config['cookie']['name'], config['cookie']['key'], cookie_expiry_days=1
 )
 
-name, authentication_status, username = authenticator.login('Login', 'main')
+name, authentication_status, username = authenticator.login(location='main')
 
 if authentication_status:
     st.success(f"Bienvenido, {name} ({config['credentials']['usernames'][username]['role']})")
