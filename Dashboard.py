@@ -36,9 +36,8 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# ← SOLO uno de estos dos ↓↓↓↓
-name, authentication_status, username = authenticator.login('main')  # ← Login en el cuerpo principal
-# name, authentication_status, username = authenticator.login('sidebar')  # ← Login en el sidebar
+
+name, authentication_status, username = authenticator.login()
 
 if authentication_status:
     st.success(f"Bienvenido, {name} ({config['credentials']['usernames'][username]['role']})")
@@ -47,7 +46,6 @@ elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
 elif authentication_status is None:
     st.warning("Por favor, ingresa tus datos")
-
 
     # =========== 2. Carga el DataFrame desde el CSV ===========
     df = pd.read_csv('data_dashboard.csv')
