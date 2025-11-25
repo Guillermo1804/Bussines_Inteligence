@@ -34,6 +34,17 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
     st.success(f"Bienvenido, {usuario_actual} (rol: {roles[usuario_actual]})")
     rol = roles[usuario_actual]
 
+    # LINK EN EL SIDEBAR PARA TODOS LOS ROLES
+    st.sidebar.markdown(
+        """
+        <a href="https://olapproyecto-xefmydgzg8zgn3zdwyn9du.streamlit.app/" target="_blank">
+            <button style="background-color:#49BEAA;color:white;padding:10px 24px;border:none;border-radius:4px;">
+                Ir a OLAP Proyecto 🚀
+            </button>
+        </a>
+        """, unsafe_allow_html=True
+    )
+
     # ===== Carga DataFrame e implementa filtros (todos los roles pueden filtrar) =====
     df = pd.read_csv('data_dashboard.csv')
     st.sidebar.header("Filtros avanzados")
