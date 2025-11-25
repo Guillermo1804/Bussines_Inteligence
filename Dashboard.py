@@ -1,31 +1,41 @@
 import streamlit as st
 import streamlit_authenticator as stauth
 import pandas as pd
-
-usernames = ['admin', 'analista1', 'viewer1']
-names = ['Administrador', 'Analista', 'Visualizador']
-passwords = ['admin123', 'analista123', 'viewer123']
-
-roles = {
-    'admin': 'admin',
-    'analista1': 'analista',
-    'viewer1': 'viewer'
+# Configuración estilo dict/YAML para usuarios
+config = {
+    'credentials': {
+        'usernames': {
+            'admin': {
+                'name': 'Administrador',
+                'password': 'admin123',
+                'role': 'admin'
+            },
+            'analista1': {
+                'name': 'Analista',
+                'password': 'analista123',
+                'role': 'analista'
+            },
+            'viewer1': {
+                'name': 'Visualizador',
+                'password': 'viewer123',
+                'role': 'viewer'
+            }
+        }
+    },
+    'cookie': {
+        'name': 'dashboardBI',
+        'key': 'abcdef',
+    }
 }
 
 authenticator = stauth.Authenticate(
-    names=names,
-    usernames=usernames,
-    passwords=passwords,
-    cookie_name="dashboardBI",
-    key="abcdef"
-    
-    
+    config['credentials'], config['cookie']['name'], config['cookie']['key'], cookie_expiry_days=1
 )
 
-name, authentication_status, username = authenticator.login("Login", "main")
+name, authentication_status, username = authenticator.login('Login', 'main')
 
 if authentication_status:
-    st.success(f"Bienvenido, {name} ({roles[username]})")
+    st.success(f"Bienvenido, {name} ({config['credentials']['usernames'][username]['role']})")
     authenticator.logout("Cerrar sesión", "sidebar")
 elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
