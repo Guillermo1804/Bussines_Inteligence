@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import plotly.graph_objects as go
 
 # ---- Diccionario de usuarios, contraseñas y roles ----
 usuarios = {
@@ -51,28 +52,90 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
 
     # --------------- Vistas según rol -----------------
     if rol in ['admin', 'analista']:
-        st.header("KPI Financieros")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Presupuesto Total", f"${df_f['Presupuesto'].sum():,.2f}")
-        col2.metric("Desviación Promedio", f"${df_f['Desviacion'].mean():,.2f}")
-        col3.metric("ROI Promedio", f"{df_f['ROI'].mean()*100:.2f}%")
+        st.header("Panel visual de KPI's")
 
-        st.header("KPI de Cumplimiento")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Tareas Totales", int(df_f['Tareas_Total'].sum()))
-        col2.metric("Automatización", int(df_f['Automatizacion'].sum()))
-        col3.metric("Defectos", int(df_f['Defectos'].sum()))
+        # KPIs: Calcula los valores
+        presupuesto_total = df_f['Presupuesto'].sum()
+        desviacion_prom = df_f['Desviacion'].mean()
+        roi_prom = df_f['ROI'].mean()
+        automatizacion_prom = df_f['Automatizacion'].mean()
+        defectos_prom = df_f['Defectos'].mean()
+        tareas_total = df_f['Tareas_Total'].sum()
+        proyectos_seguridad = df_f['Seguridad'].sum()
+        clientes_activos = df_f["Cliente"].nunique()
+        sectores_atendidos = df_f["Industria"].nunique()
 
-        st.header("KPI de Calidad")
-        col1, col2 = st.columns(2)
-        col1.metric("Defectos Totales", int(df_f['Defectos'].sum()))
-        col2.metric("Proyectos Seguros", int(df_f['Seguridad'].sum()))
+        # KPI 1: ROI Promedio Gauge
+        st.subheader("🔍 Retorno sobre inversión (ROI)")
+        st.markdown("Mide la **rentabilidad promedio de los proyectos respecto a la meta**. Queremos ROI >= 0.15 (15%).")
+        fig_roi = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = roi_prom,
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': "ROI promedio"},
+            gauge = {
+                'axis': {'range': [0, 0.3]},
+                'bar': {'color': "darkgreen"},
+                'steps': [
+                    {'range': [0, 0.15], 'color': '#FFB6B6'},
+                    {'range': [0.15, 0.3], 'color': '#B6FCD5'}
+                ],
+                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 0.15}
+            }
+        ))
+        st.plotly_chart(fig_roi, use_container_width=True)
 
-        st.header("KPI de Crecimiento")
-        col1, col2 = st.columns(2)
-        col1.metric("Clientes Activos", df_f["Cliente"].nunique())
-        col2.metric("Sectores Atendidos", df_f["Industria"].nunique())
+        # KPI 2: Automatización promedio por proyecto
+        st.subheader("⚡ Nivel de Automatización")
+        st.markdown("Indica **cuántas tareas se automatizan por proyecto**. Queremos más de 5 tareas/proyecto.")
+        fig_auto = go.Figure(go.Bar(
+            x=["Automatización Promedio"], y=[automatizacion_prom],
+            marker_color="#4286f4", text=[f"{automatizacion_prom:.1f} tareas"], textposition="auto"
+        ))
+        fig_auto.update_yaxes(range=[0,10])
+        st.plotly_chart(fig_auto, use_container_width=True)
 
+        # KPI 3: Defectos promedio por proyecto
+        st.subheader("🛡️ Calidad: Defectos promedio")
+        st.markdown("Monitorea la **calidad de los proyectos**. Meta: menos de 2 defectos/proyecto.")
+        fig_def = go.Figure(go.Indicator(
+            mode = "number+gauge",
+            value = defectos_prom,
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': "Defectos promedio"},
+            gauge = {
+                'axis': {'range': [0, 5]},
+                'bar': {'color': "orange"},
+                'steps': [
+                    {'range': [0, 2], 'color': '#B6FCD5'},
+                    {'range': [2, 5], 'color': '#FFB6B6'}
+                ],
+                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 2}
+            }
+        ))
+        st.plotly_chart(fig_def, use_container_width=True)
+
+        # KPI 4: Distribución de presupuesto (pastel)
+        st.subheader("💰 Presupuesto por proyecto")
+        st.markdown("Visualiza **cómo se distribuye el presupuesto entre los proyectos** actuales.")
+        fig_pie = go.Figure(go.Pie(
+            labels=df_f['Proyecto'],
+            values=df_f['Presupuesto'],
+            hole=0.4
+        ))
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+        # KPI 5: Clientes activos y sectores atendidos
+        st.subheader("🌎 Alcance: Clientes y sectores atendidos")
+        st.markdown("Refleja el **alcance y la diversidad del portafolio** actual de proyectos.")
+        fig_bar = go.Figure(data=[go.Bar(
+            x=["Clientes activos", "Sectores atendidos"],
+            y=[clientes_activos, sectores_atendidos],
+            marker_color=["#49BEAA", "#FFC947"]
+        )])
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    # TODOS los roles ven el scorecard, sugerencias y análisis rápido
     st.header("Balanced Scorecard y OKRs (con metas y semáforo)")
 
     def color_scorecard(val, meta, tipo='max'):
@@ -139,7 +202,6 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
 
     # ---------- Cierre de sesión mejorado ----------
     if st.sidebar.button("Cerrar sesión"):
-        # Limpia estado y inputs
         st.session_state["log_ok"] = False
         st.session_state["usuario"] = ""
         st.session_state["usuario_input"] = ""
