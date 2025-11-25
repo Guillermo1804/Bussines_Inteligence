@@ -15,8 +15,8 @@ roles = {
 }
 
 # ---- Login ----
-usuario = st.text_input("Usuario")
-password = st.text_input("Contraseña", type="password")
+usuario = st.text_input("Usuario", key="usuario_input")
+password = st.text_input("Contraseña", type="password", key="password_input")
 btn = st.button("Login")
 
 if "log_ok" not in st.session_state:
@@ -51,7 +51,6 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
 
     # --------------- Vistas según rol -----------------
     if rol in ['admin', 'analista']:
-        # Paneles de KPIs (solo admin/analista)
         st.header("KPI Financieros")
         col1, col2, col3 = st.columns(3)
         col1.metric("Presupuesto Total", f"${df_f['Presupuesto'].sum():,.2f}")
@@ -74,7 +73,6 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
         col1.metric("Clientes Activos", df_f["Cliente"].nunique())
         col2.metric("Sectores Atendidos", df_f["Industria"].nunique())
 
-    # TODOS los roles ven el scorecard, sugerencias y análisis rápido
     st.header("Balanced Scorecard y OKRs (con metas y semáforo)")
 
     def color_scorecard(val, meta, tipo='max'):
@@ -98,7 +96,6 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
         styled = styled.applymap(lambda x: color_scorecard(x, 2, 'min'), subset=['Defectos'])
         return styled
 
-    # Metas para scorecard
     df_f['Meta ROI'] = 0.15
     df_f['Meta Automatizacion'] = 5
     df_f['Meta Defectos'] = 2
@@ -107,7 +104,6 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
             "Defectos", "Meta Defectos", "Crecimiento", "OKR"]
     st.dataframe(style_scorecard(df_f[cols].head(20)), use_container_width=True)
 
-    # Sugerencias automáticas (todos los roles)
     mejorar = []
     if df_f['ROI'].mean() < 0.15:
         mejorar.append("El ROI promedio está debajo de la meta (15%).")
@@ -128,7 +124,6 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
         "Recuerda ajustar las metas si cambian los objetivos de negocio."
     )
 
-    # Drill-down solo para admin/analista
     if rol in ['admin', 'analista']:
         st.header("Detalle por Proyecto")
         if len(proyectos) > 0:
@@ -142,10 +137,13 @@ if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session
     Los indicadores cambian en tiempo real (al actualizar el CSV).
     """)
 
-    # Botón cerrar sesión
+    # ---------- Cierre de sesión mejorado ----------
     if st.sidebar.button("Cerrar sesión"):
+        # Limpia estado y inputs
         st.session_state["log_ok"] = False
         st.session_state["usuario"] = ""
+        st.session_state["usuario_input"] = ""
+        st.session_state["password_input"] = ""
         st.experimental_rerun()
 
 elif btn:
