@@ -2,4 +2,4 @@ streamlit
 pandas
 streamlit-authenticator==0.1.5
 plotly
-
+plotly.graph_objects
