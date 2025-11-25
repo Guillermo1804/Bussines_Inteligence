@@ -1,22 +1,17 @@
 import pandas as pd
 import streamlit as st
-import streamlit_authenticator as stauth
 
-names = ["admin", "analista1", "viewer1"]
-usernames = ["admin", "analista1", "viewer1"]
-passwords = ["admin123", "analista123", "viewer123"]
+usuarios = {"admin": "admin123", "analista1": "analista123", "viewer1": "viewer123"}
 
-authenticator = stauth.Authenticate(names, usernames, passwords, "dashboardBI", "abcdef")
+usuario = st.text_input("Usuario")
+password = st.text_input("Contraseña", type="password")
 
-name, authentication_status, username = authenticator.login("main")
-
-if authentication_status:
-    st.success(f"Bienvenido, {name}")
-    authenticator.logout("sidebar")
-elif authentication_status is False:
-    st.error("Usuario o contraseña incorrectos")
-elif authentication_status is None:
-    st.warning("Por favor, ingresa tus datos")
+if st.button("Login"):
+    if usuario in usuarios and usuarios[usuario] == password:
+        st.success(f"Bienvenido, {usuario}")
+        # Aquí va tu dashboard normal
+    else:
+        st.error("Usuario o contraseña incorrectos")
 
     # =========== 2. Carga el DataFrame desde el CSV ===========
     df = pd.read_csv('data_dashboard.csv')
