@@ -2,26 +2,20 @@ import pandas as pd
 import streamlit as st
 import streamlit_authenticator as stauth
 
-names = ["Administrador", "Analista", "Visualizador"]
+names = ["admin", "analista1", "viewer1"]
 usernames = ["admin", "analista1", "viewer1"]
 passwords = ["admin123", "analista123", "viewer123"]
 
-authenticator = stauth.Authenticate(
-    names=names,
-    usernames=usernames,
-    passwords=passwords,
-    cookie_name="dashboardBI",
-    key="abcdef"
-)
+authenticator = stauth.Authenticate(names, usernames, passwords, "dashboardBI", "abcdef")
 
-name, authentication_status, username = authenticator.login('main')   # Usa solo 'main' o 'sidebar'
+name, authentication_status, username = authenticator.login("main")
 
 if authentication_status:
     st.success(f"Bienvenido, {name}")
     authenticator.logout("sidebar")
-elif authentication_status == False:
+elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
-elif authentication_status == None:
+elif authentication_status is None:
     st.warning("Por favor, ingresa tus datos")
 
     # =========== 2. Carga el DataFrame desde el CSV ===========
