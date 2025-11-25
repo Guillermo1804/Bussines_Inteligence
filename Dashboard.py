@@ -5,32 +5,26 @@ import streamlit_authenticator as stauth
 config = {
     'credentials': {
         'usernames': {
-            'admin': {
-                'name': 'Administrador',
-                'password': 'admin123'
-            },
-            'analista1': {
-                'name': 'Analista',
-                'password': 'analista123'
-            },
-            'viewer1': {
-                'name': 'Visualizador',
-                'password': 'viewer123'
-            }
+            'admin': {'name': 'Administrador', 'password': 'admin123'},
+            'analista1': {'name': 'Analista', 'password': 'analista123'},
+            'viewer1': {'name': 'Visualizador', 'password': 'viewer123'}
         }
     },
     'cookie': {
         'name': 'dashboardBI',
-        'key': 'abcdef',
-        'expiry_days': 1
+        'key': 'abcdef'
+        # 'expiry_days': 1  # <-- NO lo incluyas aquí
     }
 }
 
+# SOLO TRES argumentos
 authenticator = stauth.Authenticate(
-    config['credentials'], config['cookie']['name'], config['cookie']['key'], config['cookie']['expiry_days']
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key']
 )
 
-name, authentication_status, username = authenticator.login('main')  # SOLO 'main', 'sidebar', o 'unrendered'
+name, authentication_status, username = authenticator.login()  # Sin argumentos
 
 if authentication_status:
     st.success(f"Bienvenido, {name}")
@@ -39,7 +33,6 @@ elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
 elif authentication_status is None:
     st.warning("Por favor, ingresa tus datos")
-
 
     # =========== 2. Carga el DataFrame desde el CSV ===========
     df = pd.read_csv('data_dashboard.csv')
