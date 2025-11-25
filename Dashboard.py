@@ -5,12 +5,13 @@ import streamlit_authenticator as stauth
 import streamlit as st
 import streamlit_authenticator as stauth
 
+import streamlit as st
+import streamlit_authenticator as stauth
+
 # ===== 1. Configura usuarios y roles =====
 usernames = ['admin', 'analista1', 'viewer1']
 names = ['Administrador', 'Analista', 'Visualizador']
-# Si alguna contraseña llega en None, la convertimos a string:
-passwords = ['admin123', 'analista123', 'viewer123']
-passwords = [str(pw) if pw else "" for pw in passwords]  # ← SEGURO contra None o vacío
+passwords = ['admin123', 'analista123', 'viewer123']  # SOLO TEXTO PLANO, sin hashing
 
 roles = {
     'admin': 'admin',
@@ -18,8 +19,9 @@ roles = {
     'viewer1': 'viewer'
 }
 
+# No uses hashed_pw; pasa passwords
 authenticator = stauth.Authenticate(
-    names, usernames, hashed_pw,
+    names, usernames, passwords,
     "dashboardBI", "abcdef", cookie_expiry_days=1
 )
 
@@ -27,7 +29,7 @@ name, authentication_status, username = authenticator.login("Login", "main")
 
 if authentication_status:
     st.success(f"Bienvenido, {name} ({roles[username]})")
-    # Aquí va tu dashboard, paneles, scorecard, etc...
+    # Aquí sigue tu dashboard, paneles, scorecard, etc...
     authenticator.logout("Cerrar sesión", "sidebar")
 elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
