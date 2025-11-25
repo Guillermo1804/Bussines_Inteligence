@@ -14,14 +14,14 @@ authenticator = stauth.Authenticate(
     key="abcdef"
 )
 
-name, authentication_status, username = authenticator.login("main")
+name, authentication_status, username = authenticator.login('main')   # Usa solo 'main' o 'sidebar'
 
 if authentication_status:
     st.success(f"Bienvenido, {name}")
     authenticator.logout("sidebar")
-elif authentication_status is False:
+elif authentication_status == False:
     st.error("Usuario o contraseña incorrectos")
-elif authentication_status is None:
+elif authentication_status == None:
     st.warning("Por favor, ingresa tus datos")
 
     # =========== 2. Carga el DataFrame desde el CSV ===========
