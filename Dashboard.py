@@ -2,33 +2,23 @@ import pandas as pd
 import streamlit as st
 import streamlit_authenticator as stauth
 
-config = {
-    'credentials': {
-        'usernames': {
-            'admin': {'name': 'Administrador', 'password': 'admin123'},
-            'analista1': {'name': 'Analista', 'password': 'analista123'},
-            'viewer1': {'name': 'Visualizador', 'password': 'viewer123'}
-        }
-    },
-    'cookie': {
-        'name': 'dashboardBI',
-        'key': 'abcdef'
-        # 'expiry_days': 1  # <-- NO lo incluyas aquí
-    }
-}
+names = ["Administrador", "Analista", "Visualizador"]
+usernames = ["admin", "analista1", "viewer1"]
+passwords = ["admin123", "analista123", "viewer123"]
 
-# SOLO TRES argumentos
 authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key']
+    names=names,
+    usernames=usernames,
+    passwords=passwords,
+    cookie_name="dashboardBI",
+    key="abcdef"
 )
 
-name, authentication_status, username = authenticator.login()  # Sin argumentos
+name, authentication_status, username = authenticator.login("main")
 
 if authentication_status:
     st.success(f"Bienvenido, {name}")
-    authenticator.logout('sidebar')
+    authenticator.logout("sidebar")
 elif authentication_status is False:
     st.error("Usuario o contraseña incorrectos")
 elif authentication_status is None:
