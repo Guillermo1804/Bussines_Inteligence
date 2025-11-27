@@ -52,7 +52,7 @@ fila1_col1, fila1_col2 = st.columns(2)
 fila2_col1, fila2_col2 = st.columns(2)
 
 # =====================================================
-# 1) Financiera – Proyectos dentro de presupuesto (línea por año)
+# 1) Financiera – Proyectos dentro de presupuesto (barras por año)
 # =====================================================
 with fila1_col1:
     st.markdown("#### 1. Financiera – Proyectos dentro de presupuesto")
@@ -69,7 +69,6 @@ with fila1_col1:
         c2.metric("Dentro de presupuesto", total_dentro)
         c3.metric("% Dentro", f"{pct_dentro:.1f}%")
 
-        # Serie por año: % dentro + cantidades dentro / fuera
         if "AnioCierre" in proy_final.columns:
             resumen_anio = (
                 proy_final
@@ -84,45 +83,54 @@ with fila1_col1:
             resumen_anio["FueraPresupuesto"] = (
                 resumen_anio["Finalizados"] - resumen_anio["DentroPresupuesto"]
             )
-            resumen_anio["PctDentro"] = (
-                resumen_anio["DentroPresupuesto"] / resumen_anio["Finalizados"] * 100
-            )
 
-            # Asegurar años enteros en el eje X
+            # pasar a formato largo para barras agrupadas
             resumen_anio["AnioCierre"] = resumen_anio["AnioCierre"].astype(str)
+            long_df = resumen_anio.melt(
+                id_vars=["AnioCierre"],
+                value_vars=["DentroPresupuesto", "FueraPresupuesto"],
+                var_name="Tipo",
+                value_name="Proyectos"
+            )
+            long_df["Tipo"] = long_df["Tipo"].map({
+                "DentroPresupuesto": "Dentro del presupuesto",
+                "FueraPresupuesto": "Fuera del presupuesto"
+            })
 
-            fig1 = px.line(
-                resumen_anio,
+            fig1 = px.bar(
+                long_df,
                 x="AnioCierre",
-                y="PctDentro",
-                markers=True,
-                labels={
-                    "PctDentro": "% Dentro de presupuesto",
-                    "AnioCierre": "Año"
-                },
-                height=140
+                y="Proyectos",
+                color="Tipo",
+                barmode="group",
+                height=140,
+                labels={"AnioCierre": "Año", "Proyectos": "Número de proyectos"}
             )
-            fig1.update_layout(
-                margin=dict(l=10, r=10, t=10, b=10),
-                yaxis_title="% Dentro",
-                xaxis_type="category"
-            )
+            fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10))
             st.plotly_chart(fig1, use_container_width=True)
         else:
-            # Si no hay año, mostrar una sola barra de porcentaje
-            resumen = pd.DataFrame({"Categoría": ["% Dentro"], "Valor": [pct_dentro]})
-            fig1 = px.bar(resumen, x="Categoría", y="Valor", text="Valor", height=140)
-            fig1.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-            fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10), yaxis_title="%")
+            # Sin año, solo una barra global
+            resumen = pd.DataFrame({
+                "Tipo": ["Dentro del presupuesto", "Fuera del presupuesto"],
+                "Proyectos": [total_dentro, total_final - total_dentro]
+            })
+            fig1 = px.bar(
+                resumen,
+                x="Tipo",
+                y="Proyectos",
+                text="Proyectos",
+                height=140
+            )
+            fig1.update_traces(textposition="outside")
+            fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10))
             st.plotly_chart(fig1, use_container_width=True)
 
         st.caption(
-            "Cálculo: proyectos dentro de presupuesto si costo_real ≤ presupuesto; "
-            "porcentaje = dentro / finalizados × 100."
+            "Cálculo: por cada año se cuentan los proyectos finalizados con costo_real "
+            "≤ presupuesto (Dentro del presupuesto) y el resto como Fuera del presupuesto."
         )
     else:
         st.info("Sin proyectos finalizados en el período seleccionado.")
-
 
 # =====================================================
 # 2) Cliente / Mercado – Industrias con más cancelaciones (solo barras)
