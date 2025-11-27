@@ -55,7 +55,7 @@ with col_boton:
            target="_blank" 
            style="display:inline-block; padding:10px 20px; background-color:#4CAF50; 
                   color:white; text-decoration:none; border-radius:5px; font-weight:bold;">
-           ➜ Siguiente
+           ➜ Modelo de Predicción
         </a>
         """,
         unsafe_allow_html=True
