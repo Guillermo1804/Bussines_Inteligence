@@ -23,13 +23,14 @@ st.markdown(
 )
 
 @st.cache_data
-def load_data():
+def load_data(version: int = 1):
     proyectos = pd.read_csv("dw_proyectos.csv")
     tareas = pd.read_csv("dw_tareas.csv")
     incidentes = pd.read_csv("dw_incidentes.csv")
-    return proyectos, tareas, incidentes
+    hechos = pd.read_csv("dw_hechos_proyecto.csv")
+    return proyectos, tareas, incidentes, hechos
 
-proyectos, tareas, incidentes = load_data()
+proyectos, tareas, incidentes, hechos = load_data(version=1)
 
 # Título más compacto con HTML
 st.markdown(
