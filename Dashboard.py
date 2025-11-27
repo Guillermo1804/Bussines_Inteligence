@@ -12,9 +12,9 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    header {visibility: hidden;}             /* oculta la barra superior de Streamlit */
+    header {visibility: hidden;}
     .block-container {padding-top: 0.1rem; padding-bottom: 0.2rem;}
-    h1, h2, h3 {margin-top: 0.1rem; margin-bottom: 0.1rem;}
+    h1, h2, h3, h4 {margin-top: 0.1rem; margin-bottom: 0.1rem;}
     [data-testid="stMetricValue"] {font-size: 1.1rem;}
     [data-testid="stMetricLabel"] {font-size: 0.8rem;}
     </style>
@@ -51,7 +51,7 @@ fila1_col1, fila1_col2 = st.columns(2)
 fila2_col1, fila2_col2 = st.columns(2)
 
 # =====================================================
-# 1) Financiera – Proyectos dentro de presupuesto
+# 1) Financiera – Proyectos dentro de presupuesto (línea por año)
 # =====================================================
 with fila1_col1:
     st.markdown("#### 1. Financiera – Proyectos dentro de presupuesto")
@@ -68,20 +68,41 @@ with fila1_col1:
         c2.metric("Dentro de presupuesto", total_dentro)
         c3.metric("% Dentro", f"{pct_dentro:.1f}%")
 
-        resumen = pd.DataFrame({
-            "Categoría": ["Dentro", "Fuera"],
-            "Proyectos": [total_dentro, total_final - total_dentro]
-        })
-        fig1 = px.bar(
-            resumen,
-            x="Categoría",
-            y="Proyectos",
-            text="Proyectos",
-            height=140
-        )
-        fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10))
-        fig1.update_traces(textposition="outside")
-        st.plotly_chart(fig1, use_container_width=True)
+        # Serie temporal por año (si hay columna AnioCierre)
+        if "AnioCierre" in proy_final.columns:
+            resumen_anio = (
+                proy_final
+                .assign(
+                    Dentro=lambda df: df["costo_real"] <= df["presupuesto"]
+                )
+                .groupby("AnioCierre")
+                .agg(
+                    Finalizados=("idProyecto", "count"),
+                    DentroPresupuesto=("Dentro", "sum")
+                )
+                .reset_index()
+            )
+            resumen_anio["PctDentro"] = (
+                resumen_anio["DentroPresupuesto"] / resumen_anio["Finalizados"] * 100
+            )
+
+            fig1 = px.line(
+                resumen_anio,
+                x="AnioCierre",
+                y="PctDentro",
+                markers=True,
+                labels={"PctDentro": "% Dentro de presupuesto"},
+                height=140
+            )
+            fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10), yaxis_title="% Dentro")
+            st.plotly_chart(fig1, use_container_width=True)
+        else:
+            # Si no hay año, mostrar una sola barra de porcentaje
+            resumen = pd.DataFrame({"Categoría": ["% Dentro"], "Valor": [pct_dentro]})
+            fig1 = px.bar(resumen, x="Categoría", y="Valor", text="Valor", height=140)
+            fig1.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+            fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10), yaxis_title="%")
+            st.plotly_chart(fig1, use_container_width=True)
 
         st.caption(
             "Cálculo: proyectos dentro de presupuesto si costo_real ≤ presupuesto; "
@@ -91,7 +112,7 @@ with fila1_col1:
         st.info("Sin proyectos finalizados en el período seleccionado.")
 
 # =====================================================
-# 2) Cliente / Mercado – Industrias con más cancelaciones
+# 2) Cliente / Mercado – Industrias con más cancelaciones (solo barras)
 # =====================================================
 with fila1_col2:
     st.markdown("#### 2. Cliente – Industrias con más proyectos cancelados")
@@ -106,21 +127,17 @@ with fila1_col2:
         )
         top = industria_counts.head(5)
 
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            st.dataframe(top, use_container_width=True, height=120)
-        with c2:
-            fig2 = px.bar(
-                top,
-                x="ProyectosCancelados",
-                y="Industria",
-                orientation="h",
-                text="ProyectosCancelados",
-                height=140
-            )
-            fig2.update_layout(margin=dict(l=10, r=10, t=10, b=10))
-            fig2.update_traces(textposition="outside")
-            st.plotly_chart(fig2, use_container_width=True)
+        fig2 = px.bar(
+            top,
+            x="ProyectosCancelados",
+            y="Industria",
+            orientation="h",
+            text="ProyectosCancelados",
+            height=140
+        )
+        fig2.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+        fig2.update_traces(textposition="outside")
+        st.plotly_chart(fig2, use_container_width=True)
 
         st.caption(
             "Cálculo: conteo de proyectos con EstadoProyecto = 'CANCELADO' agrupados por Industria."
@@ -129,7 +146,7 @@ with fila1_col2:
         st.info("Sin proyectos cancelados o sin columna 'Industria'.")
 
 # =====================================================
-# 3) Procesos Internos – % de tareas automatizadas
+# 3) Procesos Internos – % de tareas automatizadas (barras por proyecto)
 # =====================================================
 with fila2_col1:
     st.markdown("#### 3. Procesos – Porcentaje de tareas automatizadas")
@@ -144,25 +161,52 @@ with fila2_col1:
         c2.metric("Automatizadas", total_auto)
         c3.metric("% Automatizadas", f"{pct_auto:.1f}%")
 
-        vals = [total_auto, total_tareas - total_auto]
-        labels = ["Automatizadas", "No automatizadas"]
-        fig3 = px.pie(
-            values=vals,
-            names=labels,
-            hole=0.55,
-            height=140
-        )
-        fig3.update_layout(showlegend=True, margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig3, use_container_width=True)
+        # % automatización por proyecto
+        if "Proyecto_idProyecto" in tareas.columns:
+            resumen_auto = (
+                tareas.groupby("Proyecto_idProyecto")
+                .agg(
+                    TareasTotales=("idTarea", "count"),
+                    TareasAuto=("EsAutomatizacion", "sum")
+                )
+                .reset_index()
+            )
+            resumen_auto["PctAuto"] = (
+                resumen_auto["TareasAuto"] / resumen_auto["TareasTotales"] * 100
+            )
+
+            resumen_auto = resumen_auto.merge(
+                proyectos[["idProyecto", "nombre_proyecto"]],
+                left_on="Proyecto_idProyecto",
+                right_on="idProyecto",
+                how="left"
+            )
+
+            top_auto = resumen_auto.sort_values("PctAuto", ascending=False).head(5)
+
+            fig3 = px.bar(
+                top_auto,
+                x="nombre_proyecto",
+                y="PctAuto",
+                text="PctAuto",
+                labels={"PctAuto": "% Automatizadas", "nombre_proyecto": "Proyecto"},
+                height=140
+            )
+            fig3.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+            fig3.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+            st.plotly_chart(fig3, use_container_width=True)
+        else:
+            st.info("No se encontró la columna Proyecto_idProyecto en tareas.")
 
         st.caption(
-            "Cálculo: % automatización = tareas con EsAutomatizacion = 1 / total de tareas × 100."
+            "Cálculo: % automatización = tareas con EsAutomatizacion = 1 / total de tareas × 100. "
+            "En el gráfico se muestra por proyecto."
         )
     else:
         st.info("No hay información suficiente de tareas.")
 
 # =====================================================
-# 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes
+# 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes (barras)
 # =====================================================
 with fila2_col2:
     st.markdown("#### 4. Aprendizaje/Riesgo – Proyectos con mayor % de incidentes")
@@ -191,18 +235,13 @@ with fila2_col2:
 
         top_inc = resumen.sort_values("PctIncidentes", ascending=False).head(5)
 
-        st.dataframe(
-            top_inc[["nombre_proyecto", "NumIncidentes", "NumTareas", "PctIncidentes"]],
-            use_container_width=True,
-            height=120
-        )
-
         fig4 = px.bar(
             top_inc,
             x="PctIncidentes",
             y="nombre_proyecto",
             orientation="h",
             text="PctIncidentes",
+            labels={"PctIncidentes": "% Incidentes", "nombre_proyecto": "Proyecto"},
             height=140
         )
         fig4.update_layout(margin=dict(l=10, r=10, t=10, b=10))
