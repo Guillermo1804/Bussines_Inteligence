@@ -146,10 +146,10 @@ with fila1_col2:
         st.info("Sin proyectos cancelados o sin columna 'Industria'.")
 
 # =====================================================
-# 3) Procesos Internos – % de tareas automatizadas (barras por proyecto)
+# 3) Procesos Internos – Tareas automatizadas vs no automatizadas por proyecto
 # =====================================================
 with fila2_col1:
-    st.markdown("#### 3. Procesos – Porcentaje de tareas automatizadas")
+    st.markdown("#### 3. Procesos – Tareas automatizadas vs no automatizadas por proyecto")
     if not tareas.empty and "EsAutomatizacion" in tareas.columns:
         total_tareas = len(tareas)
         tareas_auto = tareas[tareas["EsAutomatizacion"] == 1]
@@ -161,7 +161,7 @@ with fila2_col1:
         c2.metric("Automatizadas", total_auto)
         c3.metric("% Automatizadas", f"{pct_auto:.1f}%")
 
-        # % automatización por proyecto
+        # Cantidad de tareas auto / no auto por proyecto
         if "Proyecto_idProyecto" in tareas.columns:
             resumen_auto = (
                 tareas.groupby("Proyecto_idProyecto")
@@ -171,10 +171,11 @@ with fila2_col1:
                 )
                 .reset_index()
             )
-            resumen_auto["PctAuto"] = (
-                resumen_auto["TareasAuto"] / resumen_auto["TareasTotales"] * 100
+            resumen_auto["TareasNoAuto"] = (
+                resumen_auto["TareasTotales"] - resumen_auto["TareasAuto"]
             )
 
+            # Unir nombres de proyecto
             resumen_auto = resumen_auto.merge(
                 proyectos[["idProyecto", "nombre_proyecto"]],
                 left_on="Proyecto_idProyecto",
@@ -182,28 +183,43 @@ with fila2_col1:
                 how="left"
             )
 
-            top_auto = resumen_auto.sort_values("PctAuto", ascending=False).head(5)
+            # Top N por total de tareas (o por automatizadas, como prefieras)
+            top_auto = resumen_auto.sort_values(
+                "TareasTotales", ascending=False
+            ).head(5)
+
+            # Pasar a formato largo para barras agrupadas
+            plot_df = top_auto.melt(
+                id_vars=["nombre_proyecto"],
+                value_vars=["TareasAuto", "TareasNoAuto"],
+                var_name="Tipo",
+                value_name="Cantidad"
+            )
+            plot_df["Tipo"] = plot_df["Tipo"].map(
+                {"TareasAuto": "Automatizadas", "TareasNoAuto": "No automatizadas"}
+            )
 
             fig3 = px.bar(
-                top_auto,
+                plot_df,
                 x="nombre_proyecto",
-                y="PctAuto",
-                text="PctAuto",
-                labels={"PctAuto": "% Automatizadas", "nombre_proyecto": "Proyecto"},
-                height=140
+                y="Cantidad",
+                color="Tipo",
+                barmode="group",
+                height=140,
+                labels={"nombre_proyecto": "Proyecto", "Cantidad": "Tareas"},
             )
-            fig3.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
             fig3.update_layout(margin=dict(l=10, r=10, t=10, b=10))
             st.plotly_chart(fig3, use_container_width=True)
         else:
             st.info("No se encontró la columna Proyecto_idProyecto en tareas.")
 
         st.caption(
-            "Cálculo: % automatización = tareas con EsAutomatizacion = 1 / total de tareas × 100. "
-            "En el gráfico se muestra por proyecto."
+            "Cálculo: por cada proyecto se cuentan las tareas con EsAutomatizacion = 1 "
+            "(Automatizadas) y las restantes como No automatizadas."
         )
     else:
         st.info("No hay información suficiente de tareas.")
+
 
 # =====================================================
 # 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes (barras)
