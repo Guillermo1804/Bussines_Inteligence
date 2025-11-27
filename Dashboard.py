@@ -8,12 +8,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Reducir márgenes y tamaño general
+# Reducir al máximo márgenes y tamaños
 st.markdown(
     """
     <style>
-    .block-container {padding-top: 0.5rem; padding-bottom: 0.5rem;}
-    [data-testid="stMetricValue"] {font-size: 1.3rem;}
+    .block-container {padding-top: 0.2rem; padding-bottom: 0.2rem;}
+    h1, h2, h3 {margin-top: 0.2rem; margin-bottom: 0.2rem;}
+    [data-testid="stMetricValue"] {font-size: 1.1rem;}
+    [data-testid="stMetricLabel"] {font-size: 0.8rem;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -28,7 +30,7 @@ def load_data():
 
 proyectos, tareas, incidentes = load_data()
 
-st.markdown("## Balanced Scorecard de Proyectos (DW)")
+st.title("Balanced Scorecard de Proyectos (DW)")
 
 # Filtro global compacto
 anios = sorted(proyectos["AnioCierre"].dropna().unique()) if "AnioCierre" in proyectos.columns else []
@@ -70,7 +72,7 @@ with fila1_col1:
             x="Categoría",
             y="Proyectos",
             text="Proyectos",
-            height=180
+            height=140
         )
         fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10))
         fig1.update_traces(textposition="outside")
@@ -101,7 +103,7 @@ with fila1_col2:
 
         c1, c2 = st.columns([1, 1])
         with c1:
-            st.dataframe(top, use_container_width=True, height=150)
+            st.dataframe(top, use_container_width=True, height=120)
         with c2:
             fig2 = px.bar(
                 top,
@@ -109,7 +111,7 @@ with fila1_col2:
                 y="Industria",
                 orientation="h",
                 text="ProyectosCancelados",
-                height=180
+                height=140
             )
             fig2.update_layout(margin=dict(l=10, r=10, t=10, b=10))
             fig2.update_traces(textposition="outside")
@@ -143,7 +145,7 @@ with fila2_col1:
             values=vals,
             names=labels,
             hole=0.55,
-            height=180
+            height=140
         )
         fig3.update_layout(showlegend=True, margin=dict(l=10, r=10, t=10, b=10))
         st.plotly_chart(fig3, use_container_width=True)
@@ -187,7 +189,7 @@ with fila2_col2:
         st.dataframe(
             top_inc[["nombre_proyecto", "NumIncidentes", "NumTareas", "PctIncidentes"]],
             use_container_width=True,
-            height=150
+            height=120
         )
 
         fig4 = px.bar(
@@ -196,7 +198,7 @@ with fila2_col2:
             y="nombre_proyecto",
             orientation="h",
             text="PctIncidentes",
-            height=180
+            height=140
         )
         fig4.update_layout(margin=dict(l=10, r=10, t=10, b=10))
         fig4.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
