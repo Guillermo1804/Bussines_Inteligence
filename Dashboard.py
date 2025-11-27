@@ -248,21 +248,30 @@ with fila2_col1:
 with fila2_col2:
     st.markdown("#### 4. Aprendizaje/Riesgo – Proyectos con mayor % de incidentes")
     if not incidentes.empty:
+        # Incidentes por proyecto
         inc_por_proy = (
             incidentes.groupby("Proyecto_idProyecto")["idIncidente"]
             .count()
             .reset_index(name="NumIncidentes")
         )
+
+        # Tareas por proyecto
         tareas_por_proy = (
             tareas.groupby("Proyecto_idProyecto")["idTarea"]
             .count()
             .reset_index(name="NumTareas")
         )
 
-        resumen = inc_por_proy.merge(tareas_por_proy, on="Proyecto_idProyecto", how="left")
+        # Unir y calcular porcentaje
+        resumen = inc_por_proy.merge(
+            tareas_por_proy, on="Proyecto_idProyecto", how="left"
+        )
         resumen["NumTareas"] = resumen["NumTareas"].fillna(1)
-        resumen["PctIncidentes"] = (resumen["NumIncidentes"] / resumen["NumTareas"]) * 100
+        resumen["PctIncidentes"] = (
+            resumen["NumIncidentes"] / resumen["NumTareas"] * 100
+        ).clip(upper=100)  # máx 100 % si no quieres valores > 100
 
+        # Añadir nombre de proyecto
         resumen = resumen.merge(
             proyectos[["idProyecto", "nombre_proyecto"]],
             left_on="Proyecto_idProyecto",
@@ -270,7 +279,13 @@ with fila2_col2:
             how="left"
         )
 
-        top_inc = resumen.sort_values("PctIncidentes", ascending=False).head(5)
+        # Top 5 proyectos distintos por % de incidentes
+        top_inc = (
+            resumen
+            .sort_values("PctIncidentes", ascending=False)
+            .drop_duplicates(subset=["nombre_proyecto"])
+            .head(5)
+        )
 
         fig4 = px.bar(
             top_inc,
@@ -286,7 +301,9 @@ with fila2_col2:
         st.plotly_chart(fig4, use_container_width=True)
 
         st.caption(
-            "Cálculo: PctIncidentes = número de incidentes del proyecto / número de tareas del proyecto × 100."
+            "Cálculo: PctIncidentes = (número de incidentes del proyecto / número de tareas del proyecto) × 100; "
+            "se muestran los proyectos con mayor porcentaje."
         )
     else:
         st.info("No hay información de incidentes en el DW.")
+
