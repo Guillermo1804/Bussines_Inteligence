@@ -269,7 +269,7 @@ with fila2_col2:
         resumen["NumTareas"] = resumen["NumTareas"].fillna(1)
         resumen["PctIncidentes"] = (
             resumen["NumIncidentes"] / resumen["NumTareas"] * 100
-        ).clip(upper=100)  # máx 100 % si no quieres valores > 100
+        ).clip(upper=100)  # máx 100 %
 
         # Añadir nombre de proyecto
         resumen = resumen.merge(
@@ -283,7 +283,7 @@ with fila2_col2:
         top_inc = (
             resumen
             .sort_values("PctIncidentes", ascending=False)
-            .drop_duplicates(subset=["nombre_proyecto"])
+            .drop_duplicates(subset=["nombre_proyecto"])  # una fila por proyecto
             .head(5)
         )
 
@@ -306,4 +306,3 @@ with fila2_col2:
         )
     else:
         st.info("No hay información de incidentes en el DW.")
-
