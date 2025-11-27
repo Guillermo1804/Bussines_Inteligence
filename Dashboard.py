@@ -1,223 +1,177 @@
-import pandas as pd
 import streamlit as st
-import plotly.graph_objects as go
+import pandas as pd
 
-# ---- Diccionario de usuarios, contraseñas y roles ----
-usuarios = {
-    "admin": "admin123",
-    "analista1": "analista123",
-    "viewer1": "viewer123"
-}
+# -----------------------------
+# Carga de datos desde CSV
+# -----------------------------
+@st.cache_data
+def load_data():
+    proyectos = pd.read_csv("dw_proyectos.csv")
+    tareas = pd.read_csv("dw_tareas.csv")
+    incidentes = pd.read_csv("dw_incidentes.csv")
+    return proyectos, tareas, incidentes
 
-roles = {
-    "admin": "admin",
-    "analista1": "analista",
-    "viewer1": "viewer"
-}
+proyectos, tareas, incidentes = load_data()
 
-# ---- Login ----
-usuario = st.text_input("Usuario", key="usuario_input")
-password = st.text_input("Contraseña", type="password", key="password_input")
-btn = st.button("Login")
+st.set_page_config(page_title="Balanced Scorecard - DW Gestión", layout="wide")
+st.title("📊 Balanced Scorecard - Data Warehouse de Proyectos")
+st.markdown("---")
 
-if "log_ok" not in st.session_state:
-    st.session_state["log_ok"] = False
-    st.session_state["usuario"] = ""
+# Filtros globales opcionales
+st.sidebar.header("Filtros Generales")
+anios_disponibles = sorted(proyectos["AnioCierre"].dropna().unique())
+anio_sel = st.sidebar.multiselect(
+    "Filtrar por año de cierre",
+    anios_disponibles,
+    default=anios_disponibles
+)
+if anio_sel:
+    proyectos = proyectos[proyectos["AnioCierre"].isin(anio_sel)]
 
-# --- Muestra el dashboard SOLO si login es válido o sesión activa ---
-if (btn and usuario in usuarios and usuarios[usuario] == password) or st.session_state["log_ok"]:
-    if usuario in usuarios and usuarios[usuario] == password and not st.session_state["log_ok"]:
-        st.session_state["log_ok"] = True
-        st.session_state["usuario"] = usuario
+# -----------------------------
+# SECTOR 1: Perspectiva Financiera
+# ¿Qué % de proyectos finalizados se mantuvieron dentro del presupuesto?
+# -----------------------------
+st.header("1️⃣ Perspectiva Financiera")
+st.subheader("¿Qué porcentaje de proyectos finalizados se mantuvieron en el presupuesto original?")
 
-    usuario_actual = st.session_state["usuario"] if st.session_state["usuario"] else usuario
-    st.success(f"Bienvenido, {usuario_actual} (rol: {roles[usuario_actual]})")
-    rol = roles[usuario_actual]
+proy_finalizados = proyectos[proyectos["EstadoProyecto"].str.upper() == "FINALIZADO"]
 
-    # LINK EN EL SIDEBAR PARA TODOS LOS ROLES
-    st.sidebar.markdown(
-        """
-        <a href="https://olapproyecto-xefmydgzg8zgn3zdwyn9du.streamlit.app/" target="_blank">
-            <button style="background-color:#49BEAA;color:white;padding:10px 24px;border:none;border-radius:4px;">
-                Ir a OLAP Proyecto 🚀
-            </button>
-        </a>
-        """, unsafe_allow_html=True
+if not proy_finalizados.empty:
+    dentro_presupuesto = proy_finalizados[proy_finalizados["costo_real"] <= proy_finalizados["presupuesto"]]
+    total_final = len(proy_finalizados)
+    total_dentro = len(dentro_presupuesto)
+    pct_dentro = (total_dentro / total_final * 100) if total_final > 0 else 0
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Proyectos finalizados", total_final)
+    with col2:
+        st.metric("Dentro de presupuesto", total_dentro)
+    with col3:
+        st.metric("% Dentro presupuesto", f"{pct_dentro:.1f}%")
+
+    # Gráfico de barras
+    status_df = pd.DataFrame({
+        "Categoría": ["Dentro presupuesto", "Fuera presupuesto"],
+        "Cantidad": [total_dentro, total_final - total_dentro]
+    })
+    st.bar_chart(status_df.set_index("Categoría"))
+
+    st.caption("**Cálculo:** Porcentaje = (Proyectos con costo_real ≤ presupuesto) / (Total de proyectos finalizados) × 100")
+else:
+    st.info("No hay proyectos finalizados en el período seleccionado.")
+
+st.markdown("---")
+
+# -----------------------------
+# SECTOR 2: Perspectiva de Clientes/Mercado
+# ¿Qué industrias tienen más proyectos cancelados?
+# -----------------------------
+st.header("2️⃣ Perspectiva de Clientes / Mercado")
+st.subheader("¿Qué industrias o sectores tienen más proyectos cancelados?")
+
+proy_cancelados = proyectos[proyectos["EstadoProyecto"].str.upper() == "CANCELADO"]
+
+if not proy_cancelados.empty:
+    industria_counts = (
+        proy_cancelados.groupby("Industria")["idProyecto"]
+        .count()
+        .reset_index(name="ProyectosCancelados")
+        .sort_values("ProyectosCancelados", ascending=False)
     )
 
-    # ===== Carga DataFrame e implementa filtros (todos los roles pueden filtrar) =====
-    df = pd.read_csv('data_dashboard.csv')
-    st.sidebar.header("Filtros avanzados")
-    proyectos = df["Proyecto"].unique().tolist()
-    clientes = df["Cliente"].unique().tolist()
-    sectores = df["Industria"].unique().tolist()
-    proyecto_sel = st.sidebar.multiselect("Proyecto", proyectos, default=proyectos)
-    cliente_sel = st.sidebar.multiselect("Cliente", clientes, default=clientes)
-    sector_sel = st.sidebar.multiselect("Sector", sectores, default=sectores)
-    filtro = (
-        df["Proyecto"].isin(proyecto_sel) &
-        df["Cliente"].isin(cliente_sel) &
-        df["Industria"].isin(sector_sel)
-    )
-    df_f = df[filtro]
+    st.dataframe(industria_counts, use_container_width=True)
+    st.bar_chart(industria_counts.set_index("Industria")["ProyectosCancelados"])
 
-    # --------------- Vistas según rol -----------------
-    if rol in ['admin', 'analista']:
-        st.header("Panel visual de KPI's")
+    st.caption("**Cálculo:** Agrupación de proyectos con EstadoProyecto = 'CANCELADO' por industria del cliente.")
+else:
+    st.info("No hay proyectos cancelados en el período seleccionado.")
 
-        # KPIs: Calcula los valores
-        presupuesto_total = df_f['Presupuesto'].sum()
-        desviacion_prom = df_f['Desviacion'].mean()
-        roi_prom = df_f['ROI'].mean()
-        automatizacion_prom = df_f['Automatizacion'].mean()
-        defectos_prom = df_f['Defectos'].mean()
-        tareas_total = df_f['Tareas_Total'].sum()
-        proyectos_seguridad = df_f['Seguridad'].sum()
-        clientes_activos = df_f["Cliente"].nunique()
-        sectores_atendidos = df_f["Industria"].nunique()
+st.markdown("---")
 
-        # KPI 1: ROI Promedio Gauge
-        st.subheader("🔍 Retorno sobre inversión (ROI)")
-        st.markdown("Mide la **rentabilidad promedio de los proyectos respecto a la meta**. Queremos ROI >= 0.15 (15%).")
-        fig_roi = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = roi_prom,
-            domain = {'x': [0, 1], 'y': [0, 1]},
-            title = {'text': "ROI promedio"},
-            gauge = {
-                'axis': {'range': [0, 0.3]},
-                'bar': {'color': "darkgreen"},
-                'steps': [
-                    {'range': [0, 0.15], 'color': '#FFB6B6'},
-                    {'range': [0.15, 0.3], 'color': '#B6FCD5'}
-                ],
-                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 0.15}
-            }
-        ))
-        st.plotly_chart(fig_roi, use_container_width=True)
+# -----------------------------
+# SECTOR 3: Perspectiva de Procesos Internos
+# ¿Qué % de tareas fueron automatizadas?
+# -----------------------------
+st.header("3️⃣ Perspectiva de Procesos Internos")
+st.subheader("¿Qué porcentaje de tareas fueron automatizadas?")
 
-        # KPI 2: Automatización promedio por proyecto
-        st.subheader("⚡ Nivel de Automatización")
-        st.markdown("Indica **cuántas tareas se automatizan por proyecto**. Queremos más de 5 tareas/proyecto.")
-        fig_auto = go.Figure(go.Bar(
-            x=["Automatización Promedio"], y=[automatizacion_prom],
-            marker_color="#4286f4", text=[f"{automatizacion_prom:.1f} tareas"], textposition="auto"
-        ))
-        fig_auto.update_yaxes(range=[0,10])
-        st.plotly_chart(fig_auto, use_container_width=True)
+if not tareas.empty:
+    total_tareas = len(tareas)
+    tareas_auto = tareas[tareas["EsAutomatizacion"] == 1]
+    total_auto = len(tareas_auto)
+    pct_auto = (total_auto / total_tareas * 100) if total_tareas > 0 else 0
 
-        # KPI 3: Defectos promedio por proyecto
-        st.subheader("🛡️ Calidad: Defectos promedio")
-        st.markdown("Monitorea la **calidad de los proyectos**. Meta: menos de 2 defectos/proyecto.")
-        fig_def = go.Figure(go.Indicator(
-            mode = "number+gauge",
-            value = defectos_prom,
-            domain = {'x': [0, 1], 'y': [0, 1]},
-            title = {'text': "Defectos promedio"},
-            gauge = {
-                'axis': {'range': [0, 5]},
-                'bar': {'color': "orange"},
-                'steps': [
-                    {'range': [0, 2], 'color': '#B6FCD5'},
-                    {'range': [2, 5], 'color': '#FFB6B6'}
-                ],
-                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 2}
-            }
-        ))
-        st.plotly_chart(fig_def, use_container_width=True)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total de tareas", total_tareas)
+    with col2:
+        st.metric("Tareas automatizadas", total_auto)
+    with col3:
+        st.metric("% Automatización", f"{pct_auto:.1f}%")
 
-        # KPI 4: Distribución de presupuesto (pastel)
-        st.subheader("💰 Presupuesto por proyecto")
-        st.markdown("Visualiza **cómo se distribuye el presupuesto entre los proyectos** actuales.")
-        fig_pie = go.Figure(go.Pie(
-            labels=df_f['Proyecto'],
-            values=df_f['Presupuesto'],
-            hole=0.4
-        ))
-        st.plotly_chart(fig_pie, use_container_width=True)
+    # Gráfico
+    auto_df = pd.DataFrame({
+        "Tipo": ["Automatizada", "No automatizada"],
+        "Cantidad": [total_auto, total_tareas - total_auto]
+    })
+    st.bar_chart(auto_df.set_index("Tipo"))
 
-        # KPI 5: Clientes activos y sectores atendidos
-        st.subheader("🌎 Alcance: Clientes y sectores atendidos")
-        st.markdown("Refleja el **alcance y la diversidad del portafolio** actual de proyectos.")
-        fig_bar = go.Figure(data=[go.Bar(
-            x=["Clientes activos", "Sectores atendidos"],
-            y=[clientes_activos, sectores_atendidos],
-            marker_color=["#49BEAA", "#FFC947"]
-        )])
-        st.plotly_chart(fig_bar, use_container_width=True)
+    st.caption("**Cálculo:** Porcentaje = (Tareas con es_automatizacion = 1) / (Total de tareas) × 100")
+else:
+    st.info("No hay información de tareas disponible.")
 
-    # TODOS los roles ven el scorecard, sugerencias y análisis rápido
-    st.header("Balanced Scorecard y OKRs (con metas y semáforo)")
+st.markdown("---")
 
-    def color_scorecard(val, meta, tipo='max'):
-        try:
-            x = float(val)
-        except:
-            return ''
-        if tipo == 'max':
-            if x >= meta: return 'background-color: #B6FCD5'
-            elif x >= 0.7 * meta: return 'background-color: #FDFDB6'
-            else: return 'background-color: #FFB6B6'
-        else:
-            if x <= meta: return 'background-color: #B6FCD5'
-            elif x <= meta*1.5: return 'background-color: #FDFDB6'
-            else: return 'background-color: #FFB6B6'
+# -----------------------------
+# SECTOR 4: Perspectiva de Aprendizaje y Crecimiento
+# ¿En qué proyectos existe mayor % de incidentes?
+# -----------------------------
+st.header("4️⃣ Perspectiva de Aprendizaje y Crecimiento")
+st.subheader("¿En qué proyectos existe mayor porcentaje de incidentes?")
 
-    def style_scorecard(df):
-        styled = df.style
-        styled = styled.applymap(lambda x: color_scorecard(x, 0.15, 'max'), subset=['ROI'])
-        styled = styled.applymap(lambda x: color_scorecard(x, 5, 'max'), subset=['Automatizacion'])
-        styled = styled.applymap(lambda x: color_scorecard(x, 2, 'min'), subset=['Defectos'])
-        return styled
-
-    df_f['Meta ROI'] = 0.15
-    df_f['Meta Automatizacion'] = 5
-    df_f['Meta Defectos'] = 2
-
-    cols = ["Proyecto", "Cliente", "ROI", "Meta ROI", "Automatizacion", "Meta Automatizacion",
-            "Defectos", "Meta Defectos", "Crecimiento", "OKR"]
-    st.dataframe(style_scorecard(df_f[cols].head(20)), use_container_width=True)
-
-    mejorar = []
-    if df_f['ROI'].mean() < 0.15:
-        mejorar.append("El ROI promedio está debajo de la meta (15%).")
-    if df_f['Defectos'].mean() > 2:
-        mejorar.append("Demasiados defectos promedio (>2 por proyecto).")
-    if df_f['Automatizacion'].mean() < 5:
-        mejorar.append("La automatización promedio por proyecto es baja (<5 tareas).")
-
-    if mejorar:
-        st.warning("**Sugerencias automáticas:**\n- " + "\n- ".join(mejorar))
-    else:
-        st.success("¡Todos los KPIs clave superan la meta!")
-
-    st.markdown(
-        "> **Análisis rápido:**\n"
-        "Prioriza proyectos con ROI bajo. \n"
-        "Atiende específicamente a los proyectos o clientes que están en rojo o amarillo, y fortalece capacitación en casos de baja automatización o alto número de defectos.\n"
-        "Recuerda ajustar las metas si cambian los objetivos de negocio."
+if not incidentes.empty:
+    # Contar incidentes por proyecto
+    inc_por_proy = (
+        incidentes.groupby("Proyecto_idProyecto")["idIncidente"]
+        .count()
+        .reset_index(name="NumIncidentes")
     )
 
-    if rol in ['admin', 'analista']:
-        st.header("Detalle por Proyecto")
-        if len(proyectos) > 0:
-            proyecto_drill = st.selectbox("Selecciona un proyecto:", proyectos)
-            st.dataframe(df[df["Proyecto"] == proyecto_drill])
-        else:
-            st.info("No hay proyectos para mostrar.")
+    # Contar tareas por proyecto
+    tareas_por_proy = (
+        tareas.groupby("Proyecto_idProyecto")["idTarea"]
+        .count()
+        .reset_index(name="NumTareas")
+    )
 
-    st.sidebar.info("""
-    Desarrollado con Streamlit y vinculado al DW.
-    Los indicadores cambian en tiempo real (al actualizar el CSV).
-    """)
+    # Merge
+    resumen = inc_por_proy.merge(tareas_por_proy, on="Proyecto_idProyecto", how="left")
+    resumen["NumTareas"] = resumen["NumTareas"].fillna(1)  # Evitar división por 0
+    resumen["PctIncidentes"] = (resumen["NumIncidentes"] / resumen["NumTareas"]) * 100
 
-    # ---------- Cierre de sesión mejorado ----------
-    if st.sidebar.button("Cerrar sesión"):
-        st.session_state["log_ok"] = False
-        st.session_state["usuario"] = ""
-        st.session_state["usuario_input"] = ""
-        st.session_state["password_input"] = ""
-        st.experimental_rerun()
+    # Unir con nombres de proyecto
+    resumen = resumen.merge(
+        proyectos[["idProyecto", "nombre_proyecto"]],
+        left_on="Proyecto_idProyecto",
+        right_on="idProyecto",
+        how="left"
+    )
 
-elif btn:
-    st.error("Usuario o contraseña incorrectos")
+    # Top N proyectos
+    top_n = st.slider("Mostrar Top N proyectos con más incidentes", 5, 20, 10)
+    top_inc = resumen.sort_values("PctIncidentes", ascending=False).head(top_n)
+
+    st.dataframe(
+        top_inc[["nombre_proyecto", "NumIncidentes", "NumTareas", "PctIncidentes"]],
+        use_container_width=True
+    )
+    st.bar_chart(top_inc.set_index("nombre_proyecto")["PctIncidentes"])
+
+    st.caption("**Cálculo:** PctIncidentes = (Nº incidentes del proyecto / Nº tareas del proyecto) × 100")
+else:
+    st.info("No hay información de incidentes disponible.")
+
+st.markdown("---")
+st.caption("📂 Balanced Scorecard construido sobre datos del Data Warehouse (db_soporte).")
