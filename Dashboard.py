@@ -69,13 +69,11 @@ with fila1_col1:
         c2.metric("Dentro de presupuesto", total_dentro)
         c3.metric("% Dentro", f"{pct_dentro:.1f}%")
 
-        # Serie temporal por año (si hay columna AnioCierre)
+        # Serie por año: % dentro + cantidades dentro / fuera
         if "AnioCierre" in proy_final.columns:
             resumen_anio = (
                 proy_final
-                .assign(
-                    Dentro=lambda df: df["costo_real"] <= df["presupuesto"]
-                )
+                .assign(Dentro=lambda df: df["costo_real"] <= df["presupuesto"])
                 .groupby("AnioCierre")
                 .agg(
                     Finalizados=("idProyecto", "count"),
@@ -83,19 +81,32 @@ with fila1_col1:
                 )
                 .reset_index()
             )
+            resumen_anio["FueraPresupuesto"] = (
+                resumen_anio["Finalizados"] - resumen_anio["DentroPresupuesto"]
+            )
             resumen_anio["PctDentro"] = (
                 resumen_anio["DentroPresupuesto"] / resumen_anio["Finalizados"] * 100
             )
+
+            # Asegurar años enteros en el eje X
+            resumen_anio["AnioCierre"] = resumen_anio["AnioCierre"].astype(str)
 
             fig1 = px.line(
                 resumen_anio,
                 x="AnioCierre",
                 y="PctDentro",
                 markers=True,
-                labels={"PctDentro": "% Dentro de presupuesto"},
+                labels={
+                    "PctDentro": "% Dentro de presupuesto",
+                    "AnioCierre": "Año"
+                },
                 height=140
             )
-            fig1.update_layout(margin=dict(l=10, r=10, t=10, b=10), yaxis_title="% Dentro")
+            fig1.update_layout(
+                margin=dict(l=10, r=10, t=10, b=10),
+                yaxis_title="% Dentro",
+                xaxis_type="category"
+            )
             st.plotly_chart(fig1, use_container_width=True)
         else:
             # Si no hay año, mostrar una sola barra de porcentaje
@@ -111,6 +122,7 @@ with fila1_col1:
         )
     else:
         st.info("Sin proyectos finalizados en el período seleccionado.")
+
 
 # =====================================================
 # 2) Cliente / Mercado – Industrias con más cancelaciones (solo barras)
