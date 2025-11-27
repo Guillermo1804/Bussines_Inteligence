@@ -251,7 +251,7 @@ with fila2_col1:
 
 
 # =====================================================
-# 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes (barras)
+# 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes (barras verticales 0–1)
 # =====================================================
 with fila2_col2:
     st.markdown("#### 4. Aprendizaje/Riesgo – Proyectos con mayor % de incidentes")
@@ -270,14 +270,14 @@ with fila2_col2:
             .reset_index(name="NumTareas")
         )
 
-        # Unir y calcular porcentaje
+        # Unir y calcular proporción (0–1)
         resumen = inc_por_proy.merge(
             tareas_por_proy, on="Proyecto_idProyecto", how="left"
         )
         resumen["NumTareas"] = resumen["NumTareas"].fillna(1)
-        resumen["PctIncidentes"] = (
-            resumen["NumIncidentes"] / resumen["NumTareas"] * 100
-        ).clip(upper=100)  # máx 100 %
+        resumen["IncidentesPorTarea"] = (
+            resumen["NumIncidentes"] / resumen["NumTareas"]
+        )
 
         # Añadir nombre de proyecto
         resumen = resumen.merge(
@@ -287,30 +287,37 @@ with fila2_col2:
             how="left"
         )
 
-        # Top 5 proyectos distintos por % de incidentes
+        # Top 5 proyectos distintos por proporción de incidentes
         top_inc = (
             resumen
-            .sort_values("PctIncidentes", ascending=False)
-            .drop_duplicates(subset=["nombre_proyecto"])  # una fila por proyecto
+            .sort_values("IncidentesPorTarea", ascending=False)
+            .drop_duplicates(subset=["nombre_proyecto"])
             .head(5)
         )
 
         fig4 = px.bar(
             top_inc,
-            x="PctIncidentes",
-            y="nombre_proyecto",
-            orientation="h",
-            text="PctIncidentes",
-            labels={"PctIncidentes": "% Incidentes", "nombre_proyecto": "Proyecto"},
+            x="nombre_proyecto",
+            y="IncidentesPorTarea",
+            text="IncidentesPorTarea",
+            labels={
+                "nombre_proyecto": "Proyecto",
+                "IncidentesPorTarea": "Incidentes por tarea"
+            },
             height=140
         )
-        fig4.update_layout(margin=dict(l=10, r=10, t=10, b=10))
-        fig4.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+        fig4.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+        fig4.update_layout(
+            margin=dict(l=10, r=10, t=10, b=10),
+            yaxis=dict(range=[0, 1]),          # escala fija de 0 a 1
+            xaxis_tickangle=-20,               # nombres menos inclinados
+            xaxis_tickfont=dict(size=9)
+        )
         st.plotly_chart(fig4, use_container_width=True)
 
         st.caption(
-            "Cálculo: PctIncidentes = (número de incidentes del proyecto / número de tareas del proyecto) × 100; "
-            "se muestran los proyectos con mayor porcentaje."
+            "Cálculo: Incidentes por tarea = número de incidentes del proyecto / número de tareas del proyecto. "
+            "Se muestran los proyectos con mayor proporción de incidentes por tarea, en escala 0–1."
         )
     else:
         st.info("No hay información de incidentes en el DW.")
