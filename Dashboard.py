@@ -229,8 +229,16 @@ with fila2_col1:
                 height=140,
                 labels={"nombre_proyecto": "Proyecto", "Cantidad": "Tareas"},
             )
-            fig3.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+
+            fig3.update_layout(
+                margin=dict(l=10, r=10, t=10, b=10),
+                legend_title_text="Tipo",
+                xaxis_tickangle=-20,          # menos inclinación
+                xaxis_tickfont=dict(size=9),  # texto más pequeño
+            )
+
             st.plotly_chart(fig3, use_container_width=True)
+
         else:
             st.info("No se encontró la columna Proyecto_idProyecto en tareas.")
 
