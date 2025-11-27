@@ -38,18 +38,24 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Filtro global compacto
+# Filtro global compacto + botón de navegación
 anios = sorted(proyectos["AnioCierre"].dropna().unique()) if "AnioCierre" in proyectos.columns else []
-col_filtro1, col_filtro2 = st.columns([1, 5])
+col_filtro1, col_filtro2, col_boton = st.columns([1, 4, 1])
+
 with col_filtro1:
     if anios:
         anio_sel = st.selectbox("Año", options=["Todos"] + list(anios), index=0)
         if anio_sel != "Todos":
             proyectos = proyectos[proyectos["AnioCierre"] == anio_sel]
 
+with col_boton:
+    if st.button("➜ Siguiente", key="btn_siguiente"):
+        st.switch_page("pages/pagina_siguiente.py")
+
 # Layout 2x2
 fila1_col1, fila1_col2 = st.columns(2)
 fila2_col1, fila2_col2 = st.columns(2)
+
 
 # =====================================================
 # 1) Financiera – Proyectos dentro de presupuesto (barras por año)
