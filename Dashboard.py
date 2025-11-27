@@ -49,8 +49,17 @@ with col_filtro1:
             proyectos = proyectos[proyectos["AnioCierre"] == anio_sel]
 
 with col_boton:
-    if st.button("➜ Siguiente", key="btn_siguiente"):
-        st.switch_page("pages/pagina_siguiente.py")
+    st.markdown(
+        """
+        <a href="https://modelo-hrr4m48jvojcjvgftqdrrg.streamlit.app/siguiente" 
+           target="_blank" 
+           style="display:inline-block; padding:10px 20px; background-color:#4CAF50; 
+                  color:white; text-decoration:none; border-radius:5px; font-weight:bold;">
+           ➜ Siguiente
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Layout 2x2
 fila1_col1, fila1_col2 = st.columns(2)
