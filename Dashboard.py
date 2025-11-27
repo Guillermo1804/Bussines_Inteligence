@@ -187,83 +187,93 @@ with fila1_col2:
 with fila2_col1:
     st.markdown("#### 3. Procesos – Tareas automatizadas vs no automatizadas por proyecto")
     
-    # Filtrar tareas por año (igual que proyectos)
-    tareas_filtradas = tareas.copy()
-    if anio_sel != "Todos" and "AnioCierre" in tareas.columns:
-        tareas_filtradas = tareas_filtradas[tareas_filtradas["AnioCierre"] == float(anio_sel)]
-    
-    if not tareas_filtradas.empty and "EsAutomatizacion" in tareas_filtradas.columns:
-        total_tareas = len(tareas_filtradas)
-        tareas_auto = tareas_filtradas[tareas_filtradas["EsAutomatizacion"] == 1]
-        total_auto = len(tareas_auto)
-        pct_auto = (total_auto / total_tareas * 100) if total_tareas > 0 else 0
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Tareas totales", total_tareas)
-        c2.metric("Automatizadas", total_auto)
-        c3.metric("% Automatizadas", f"{pct_auto:.1f}%")
-
-        if "Proyecto_idProyecto" in tareas_filtradas.columns:
-            resumen_auto = (
-                tareas_filtradas.groupby("Proyecto_idProyecto")
-                .agg(
-                    TareasTotales=("idTarea", "count"),
-                    TareasAuto=("EsAutomatizacion", "sum")
-                )
-                .reset_index()
-            )
-            resumen_auto["TareasNoAuto"] = (
-                resumen_auto["TareasTotales"] - resumen_auto["TareasAuto"]
-            )
-
-            resumen_auto = resumen_auto.merge(
-                proyectos[["idProyecto", "nombre_proyecto"]],
-                left_on="Proyecto_idProyecto",
-                right_on="idProyecto",
-                how="left"
-            )
-
-            top_n = 3
-            top_auto = resumen_auto.sort_values(
-                "TareasTotales", ascending=False
-            ).head(top_n)
-
-            plot_df = top_auto.melt(
-                id_vars=["nombre_proyecto"],
-                value_vars=["TareasAuto", "TareasNoAuto"],
-                var_name="Tipo",
-                value_name="Cantidad"
-            )
-            plot_df["Tipo"] = plot_df["Tipo"].map(
-                {"TareasAuto": "Automatizadas", "TareasNoAuto": "No automatizadas"}
-            )
-
-            fig3 = px.bar(
-                plot_df,
-                x="nombre_proyecto",
-                y="Cantidad",
-                color="Tipo",
-                barmode="group",
-                height=140,
-                labels={"nombre_proyecto": "Proyecto", "Cantidad": "Tareas"},
-            )
-            fig3.update_layout(
-                margin=dict(l=10, r=10, t=10, b=10),
-                legend_title_text="Tipo",
-                xaxis_tickangle=-20,
-                xaxis_tickfont=dict(size=9),
-            )
-            st.plotly_chart(fig3, use_container_width=True)
-        else:
-            st.info("No se encontró la columna Proyecto_idProyecto en tareas.")
-
-        st.caption(
-            "Cálculo: por cada proyecto se cuentan las tareas con EsAutomatizacion = 1 "
-            "como Automatizadas y las restantes como No automatizadas. Filtrado por año seleccionado."
+    # Hacer join entre tareas y proyectos para obtener el año
+    if not tareas.empty and not proyectos.empty:
+        tareas_con_anio = tareas.merge(
+            proyectos[["idProyecto", "AnioCierre"]],
+            left_on="Proyecto_idProyecto",
+            right_on="idProyecto",
+            how="left"
         )
-    else:
-        st.info("No hay información suficiente de tareas en el período seleccionado.")
+        
+        # Filtrar tareas por año seleccionado
+        tareas_filtradas = tareas_con_anio.copy()
+        if anio_sel != "Todos":
+            tareas_filtradas = tareas_filtradas[tareas_filtradas["AnioCierre"] == float(anio_sel)]
+        
+        if not tareas_filtradas.empty and "EsAutomatizacion" in tareas_filtradas.columns:
+            total_tareas = len(tareas_filtradas)
+            tareas_auto = tareas_filtradas[tareas_filtradas["EsAutomatizacion"] == 1]
+            total_auto = len(tareas_auto)
+            pct_auto = (total_auto / total_tareas * 100) if total_tareas > 0 else 0
 
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Tareas totales", total_tareas)
+            c2.metric("Automatizadas", total_auto)
+            c3.metric("% Automatizadas", f"{pct_auto:.1f}%")
+
+            if "Proyecto_idProyecto" in tareas_filtradas.columns:
+                resumen_auto = (
+                    tareas_filtradas.groupby("Proyecto_idProyecto")
+                    .agg(
+                        TareasTotales=("idTarea", "count"),
+                        TareasAuto=("EsAutomatizacion", "sum")
+                    )
+                    .reset_index()
+                )
+                resumen_auto["TareasNoAuto"] = (
+                    resumen_auto["TareasTotales"] - resumen_auto["TareasAuto"]
+                )
+
+                resumen_auto = resumen_auto.merge(
+                    proyectos[["idProyecto", "nombre_proyecto"]],
+                    left_on="Proyecto_idProyecto",
+                    right_on="idProyecto",
+                    how="left"
+                )
+
+                top_n = 3
+                top_auto = resumen_auto.sort_values(
+                    "TareasTotales", ascending=False
+                ).head(top_n)
+
+                plot_df = top_auto.melt(
+                    id_vars=["nombre_proyecto"],
+                    value_vars=["TareasAuto", "TareasNoAuto"],
+                    var_name="Tipo",
+                    value_name="Cantidad"
+                )
+                plot_df["Tipo"] = plot_df["Tipo"].map(
+                    {"TareasAuto": "Automatizadas", "TareasNoAuto": "No automatizadas"}
+                )
+
+                fig3 = px.bar(
+                    plot_df,
+                    x="nombre_proyecto",
+                    y="Cantidad",
+                    color="Tipo",
+                    barmode="group",
+                    height=140,
+                    labels={"nombre_proyecto": "Proyecto", "Cantidad": "Tareas"},
+                )
+                fig3.update_layout(
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    legend_title_text="Tipo",
+                    xaxis_tickangle=-20,
+                    xaxis_tickfont=dict(size=9),
+                )
+                st.plotly_chart(fig3, use_container_width=True)
+            else:
+                st.info("No se encontró la columna Proyecto_idProyecto en tareas.")
+
+            st.caption(
+                "Cálculo: por cada proyecto se cuentan las tareas con EsAutomatizacion = 1 "
+                "como Automatizadas y las restantes como No automatizadas. Filtrado por año seleccionado."
+            )
+        else:
+            st.info("No hay tareas en el período seleccionado.")
+    else:
+        st.info("No hay información suficiente de tareas o proyectos.")
 
 # =====================================================
 # 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes (barras verticales 0–1)
