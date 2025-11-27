@@ -8,12 +8,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Reducir al máximo márgenes y tamaños
+# Reducir al máximo márgenes, ocultar header y ajustar textos
 st.markdown(
     """
     <style>
-    .block-container {padding-top: 0.2rem; padding-bottom: 0.2rem;}
-    h1, h2, h3 {margin-top: 0.2rem; margin-bottom: 0.2rem;}
+    header {visibility: hidden;}             /* oculta la barra superior de Streamlit */
+    .block-container {padding-top: 0.1rem; padding-bottom: 0.2rem;}
+    h1, h2, h3 {margin-top: 0.1rem; margin-bottom: 0.1rem;}
     [data-testid="stMetricValue"] {font-size: 1.1rem;}
     [data-testid="stMetricLabel"] {font-size: 0.8rem;}
     </style>
@@ -30,7 +31,11 @@ def load_data():
 
 proyectos, tareas, incidentes = load_data()
 
-st.title("Balanced Scorecard de Proyectos (DW)")
+# Título más compacto con HTML
+st.markdown(
+    "<h3 style='margin-bottom:0.3rem;'>Balanced Scorecard de Proyectos (DW)</h3>",
+    unsafe_allow_html=True,
+)
 
 # Filtro global compacto
 anios = sorted(proyectos["AnioCierre"].dropna().unique()) if "AnioCierre" in proyectos.columns else []
@@ -49,7 +54,7 @@ fila2_col1, fila2_col2 = st.columns(2)
 # 1) Financiera – Proyectos dentro de presupuesto
 # =====================================================
 with fila1_col1:
-    st.markdown("### 1. Financiera – Proyectos dentro de presupuesto")
+    st.markdown("#### 1. Financiera – Proyectos dentro de presupuesto")
     proy_final = proyectos[proyectos["EstadoProyecto"].str.upper() == "FINALIZADO"]
 
     if not proy_final.empty:
@@ -89,7 +94,7 @@ with fila1_col1:
 # 2) Cliente / Mercado – Industrias con más cancelaciones
 # =====================================================
 with fila1_col2:
-    st.markdown("### 2. Cliente – Industrias con más proyectos cancelados")
+    st.markdown("#### 2. Cliente – Industrias con más proyectos cancelados")
     proy_cancel = proyectos[proyectos["EstadoProyecto"].str.upper() == "CANCELADO"]
 
     if not proy_cancel.empty and "Industria" in proy_cancel.columns:
@@ -127,7 +132,7 @@ with fila1_col2:
 # 3) Procesos Internos – % de tareas automatizadas
 # =====================================================
 with fila2_col1:
-    st.markdown("### 3. Procesos – Porcentaje de tareas automatizadas")
+    st.markdown("#### 3. Procesos – Porcentaje de tareas automatizadas")
     if not tareas.empty and "EsAutomatizacion" in tareas.columns:
         total_tareas = len(tareas)
         tareas_auto = tareas[tareas["EsAutomatizacion"] == 1]
@@ -160,7 +165,7 @@ with fila2_col1:
 # 4) Aprendizaje / Riesgo – Proyectos con mayor % de incidentes
 # =====================================================
 with fila2_col2:
-    st.markdown("### 4. Aprendizaje/Riesgo – Proyectos con mayor % de incidentes")
+    st.markdown("#### 4. Aprendizaje/Riesgo – Proyectos con mayor % de incidentes")
     if not incidentes.empty:
         inc_por_proy = (
             incidentes.groupby("Proyecto_idProyecto")["idIncidente"]
